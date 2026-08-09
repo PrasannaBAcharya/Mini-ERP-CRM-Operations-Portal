@@ -14,12 +14,11 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -29,37 +28,45 @@ const Login: React.FC = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h2>ERP CRM Login</h2>
+          <div className="login-logo">⊞</div>
+          <h2>Welcome back</h2>
+          <p>Sign in to your ERP CRM account</p>
         </div>
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Email</label>
-            <input 
-              type="email" 
+            <label className="form-label">Email address</label>
+            <input
+              type="email"
               className="form-input"
+              placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoFocus
             />
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               className="form-input"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
-          {error && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%' }}
+
+          {error && <div className="login-error">{error}</div>}
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', height: 44, marginTop: '0.5rem' }}
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>

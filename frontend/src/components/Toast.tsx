@@ -12,6 +12,13 @@ interface ToastContextType {
   showToast: (message: string, type: ToastType) => void;
 }
 
+const ICONS: Record<ToastType, string> = {
+  success: '✓',
+  error:   '✕',
+  warning: '⚠',
+  info:    'ℹ',
+};
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
@@ -22,8 +29,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     setToasts((prev) => [...prev, { id, message, type }]);
 
     setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 3000);
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
   }, []);
 
   return (
@@ -32,7 +39,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       <div className="toast-container">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.type}`}>
-            {toast.message}
+            <span className="toast-icon">{ICONS[toast.type]}</span>
+            <span>{toast.message}</span>
           </div>
         ))}
       </div>
@@ -42,8 +50,6 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 
 export const useToast = () => {
   const context = useContext(ToastContext);
-  if (context === undefined) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
+  if (context === undefined) throw new Error('useToast must be used within a ToastProvider');
   return context;
 };

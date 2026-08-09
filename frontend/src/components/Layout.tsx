@@ -3,18 +3,34 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/customers': 'Customers',
+  '/products':  'Products',
+  '/challans':  'Challans',
+  '/users':     'Users',
+};
+
 const Layout: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path.startsWith('/dashboard')) return 'Dashboard';
-    if (path.startsWith('/customers')) return 'Customers';
-    if (path.startsWith('/products')) return 'Products';
-    if (path.startsWith('/challans')) return 'Challans';
-    if (path.startsWith('/users')) return 'Users';
+    for (const [prefix, title] of Object.entries(PAGE_TITLES)) {
+      if (path.startsWith(prefix)) return title;
+    }
     return 'ERP CRM';
+  };
+
+  const roleBadgeClass = () => {
+    switch (user?.role) {
+      case 'ADMIN':     return 'badge-info';
+      case 'SALES':     return 'badge-success';
+      case 'WAREHOUSE': return 'badge-warning';
+      case 'ACCOUNTS':  return 'badge-gray';
+      default:          return 'badge-gray';
+    }
   };
 
   return (
@@ -22,10 +38,14 @@ const Layout: React.FC = () => {
       <Sidebar />
       <main className="main-content">
         <header className="top-header">
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{getPageTitle()}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontWeight: 500 }}>{user?.name}</span>
-            <span className="badge badge-info">{user?.role}</span>
+          <div className="top-header-left">
+            <h1>{getPageTitle()}</h1>
+          </div>
+          <div className="top-header-right">
+            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--muted-foreground)' }}>
+              {user?.name}
+            </span>
+            <span className={`badge ${roleBadgeClass()}`}>{user?.role}</span>
           </div>
         </header>
         <div className="page-content">

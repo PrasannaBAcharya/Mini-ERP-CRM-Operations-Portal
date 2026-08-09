@@ -5,6 +5,8 @@ import Pagination from '../../components/Pagination';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import TableSkeleton from '../../components/TableSkeleton';
+import EmptyState from '../../components/EmptyState';
 
 const statusBadgeClass = (status: ChallanStatus): string => {
   switch (status) {
@@ -40,9 +42,7 @@ const ChallanList: React.FC = () => {
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchChallans();
-    }, 300);
+    const delay = setTimeout(() => { fetchChallans(); }, 300);
     return () => clearTimeout(delay);
   }, [statusFilter, page]);
 
@@ -52,7 +52,7 @@ const ChallanList: React.FC = () => {
         <h2>Challans</h2>
         {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
           <button className="btn btn-primary" onClick={() => navigate('/challans/new')}>
-            New Challan
+            ＋ New Challan
           </button>
         )}
       </div>
@@ -61,7 +61,7 @@ const ChallanList: React.FC = () => {
         <div className="filters-bar">
           <select
             className="form-select"
-            style={{ width: '180px' }}
+            style={{ width: 200 }}
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           >
@@ -72,54 +72,60 @@ const ChallanList: React.FC = () => {
           </select>
         </div>
 
-        {loading ? (
-          <div className="loading-center"><div className="loading-spinner"></div></div>
-        ) : (
-          <>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Challan #</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th>Total Qty</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Challan #</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Total Qty</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableSkeleton columns={6} rows={6} />
+              ) : challans.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon="📋"
+                      title="No challans found"
+                      description={statusFilter ? `No ${statusFilter.toLowerCase()} challans match your filter.` : 'Create your first challan to get started.'}
+                      action={(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
+                        <button className="btn btn-primary btn-sm" onClick={() => navigate('/challans/new')}>New Challan</button>
+                      ) : undefined}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                challans.map((c) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.875rem' }}>
+                      {c.challanNumber}
+                    </td>
+                    <td>{c.customer?.name ?? c.customerId}</td>
+                    <td>
+                      <span className={`badge ${statusBadgeClass(c.status)}`}>{c.status}</span>
+                    </td>
+                    <td>{c.totalQuantity}</td>
+                    <td style={{ color: 'var(--muted-foreground)' }}>
+                      {new Date(c.createdAt).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <div className="btn-group">
+                        <Link to={`/challans/${c.id}`} className="btn btn-sm btn-secondary">View</Link>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {challans.map((c) => (
-                    <tr key={c.id}>
-                      <td style={{ fontWeight: 600 }}>{c.challanNumber}</td>
-                      <td>{c.customer?.name ?? c.customerId}</td>
-                      <td>
-                        <span className={`badge ${statusBadgeClass(c.status)}`}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td>{c.totalQuantity}</td>
-                      <td>{new Date(c.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        <div className="btn-group">
-                          <Link to={`/challans/${c.id}`} className="btn btn-sm btn-secondary">
-                            View
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {challans.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="empty-state">No challans found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
       </div>
     </div>
   );

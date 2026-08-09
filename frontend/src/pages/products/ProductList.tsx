@@ -5,6 +5,8 @@ import Pagination from '../../components/Pagination';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import TableSkeleton from '../../components/TableSkeleton';
+import EmptyState from '../../components/EmptyState';
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,17 +15,17 @@ const ProductList: React.FC = () => {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+  const [lowStockDismissed, setLowStockDismissed] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
   const [formData, setFormData] = useState({
     name: '', sku: '', category: '', unitPrice: '', currentStock: 0, minStockAlert: 0, location: ''
   });
 
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
-  const [stockForm, setStockForm] = useState({ quantity: 0, type: 'IN' as 'IN'|'OUT', reason: '' });
+  const [stockForm, setStockForm] = useState({ quantity: 0, type: 'IN' as 'IN' | 'OUT', reason: '' });
 
   const { showToast } = useToast();
   const { user } = useAuth();
@@ -42,11 +44,11 @@ const ProductList: React.FC = () => {
   };
 
   useEffect(() => {
-    const delaySearch = setTimeout(() => {
-      fetchProducts();
-    }, 300);
+    const delaySearch = setTimeout(() => { fetchProducts(); }, 300);
     return () => clearTimeout(delaySearch);
   }, [search, category, page]);
+
+  const lowStockProducts = products.filter(p => p.currentStock <= p.minStockAlert);
 
   const openModal = (product?: Product) => {
     if (product) {
@@ -58,9 +60,7 @@ const ProductList: React.FC = () => {
       });
     } else {
       setEditingProduct(null);
-      setFormData({
-        name: '', sku: '', category: '', unitPrice: '', currentStock: 0, minStockAlert: 0, location: ''
-      });
+      setFormData({ name: '', sku: '', category: '', unitPrice: '', currentStock: 0, minStockAlert: 0, location: '' });
     }
     setIsModalOpen(true);
   };
@@ -94,10 +94,7 @@ const ProductList: React.FC = () => {
   const handleStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockProduct) return;
-    if (stockForm.quantity <= 0) {
-      showToast('Quantity must be greater than 0', 'error');
-      return;
-    }
+    if (stockForm.quantity <= 0) { showToast('Quantity must be greater than 0', 'error'); return; }
     try {
       await addStockMovement(stockProduct.id, {
         quantityChanged: Number(stockForm.quantity),
@@ -117,52 +114,90 @@ const ProductList: React.FC = () => {
       <div className="page-header">
         <h2>Products</h2>
         {(user?.role === 'ADMIN' || user?.role === 'WAREHOUSE') && (
-          <button className="btn btn-primary" onClick={() => openModal()}>Add Product</button>
+          <button className="btn btn-primary" onClick={() => openModal()}>＋ Add Product</button>
         )}
       </div>
 
+      {/* ── Low-stock dismissible banner ── */}
+      {!lowStockDismissed && !loading && lowStockProducts.length > 0 && (
+        <div className="alert-banner alert-banner-warning">
+          <span className="alert-banner-icon">⚠️</span>
+          <div className="alert-banner-body">
+            <div className="alert-banner-title">
+              {lowStockProducts.length} product{lowStockProducts.length > 1 ? 's' : ''} running low on stock
+            </div>
+            <div className="alert-banner-products">
+              {lowStockProducts.map(p => `${p.name} (${p.currentStock} left)`).join(' · ')}
+            </div>
+          </div>
+          <button className="alert-banner-dismiss" onClick={() => setLowStockDismissed(true)}>✕</button>
+        </div>
+      )}
+
       <div className="card">
         <div className="filters-bar">
-          <input 
-            type="text" 
-            placeholder="Search name, SKU..." 
-            className="form-input" 
-            style={{ width: '300px' }}
+          <input
+            type="text"
+            placeholder="Search name, SKU..."
+            className="form-input"
+            style={{ width: 280 }}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+          <input
+            type="text"
+            placeholder="Filter by category..."
+            className="form-input"
+            style={{ width: 200 }}
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
           />
         </div>
 
-        {loading ? (
-          <div className="loading-center"><div className="loading-spinner"></div></div>
-        ) : (
-          <>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>SKU</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Location</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Location</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableSkeleton columns={7} rows={6} />
+              ) : products.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon="📦"
+                      title="No products found"
+                      description={search || category ? 'Try adjusting your search or category filter.' : 'Add your first product to get started.'}
+                      action={(user?.role === 'ADMIN' || user?.role === 'WAREHOUSE') ? (
+                        <button className="btn btn-primary btn-sm" onClick={() => openModal()}>Add Product</button>
+                      ) : undefined}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                products.map((p) => {
+                  const isLow = p.currentStock <= p.minStockAlert;
+                  return (
                     <tr key={p.id}>
-                      <td>{p.name}</td>
-                      <td>{p.sku}</td>
+                      <td style={{ fontWeight: 500 }}>{p.name}</td>
+                      <td><span className="badge badge-gray">{p.sku}</span></td>
                       <td>{p.category}</td>
                       <td>₹{p.unitPrice}</td>
                       <td>
-                        <span style={{ color: p.currentStock <= p.minStockAlert ? 'red' : 'inherit', fontWeight: p.currentStock <= p.minStockAlert ? 'bold' : 'normal' }}>
-                          {p.currentStock} {p.currentStock <= p.minStockAlert && '⚠️'}
+                        <span style={{ color: isLow ? 'var(--danger)' : 'inherit', fontWeight: isLow ? 600 : 400 }}>
+                          {p.currentStock} {isLow && '⚠️'}
                         </span>
                       </td>
-                      <td>{p.location || '-'}</td>
+                      <td style={{ color: 'var(--muted-foreground)' }}>{p.location || '—'}</td>
                       <td>
                         <div className="btn-group">
                           <Link to={`/products/${p.id}`} className="btn btn-sm btn-secondary">View</Link>
@@ -175,24 +210,22 @@ const ProductList: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                  {products.length === 0 && (
-                    <tr><td colSpan={7} className="empty-state">No products found</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
-        )}
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
       </div>
 
+      {/* ── Product create/edit modal ── */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
-              <button className="btn" onClick={closeModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+              <button className="modal-close-btn" onClick={closeModal}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
@@ -236,23 +269,26 @@ const ProductList: React.FC = () => {
         </div>
       )}
 
+      {/* ── Stock adjustment modal ── */}
       {isStockModalOpen && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h2>Adjust Stock - {stockProduct?.name}</h2>
-              <button className="btn" onClick={() => setIsStockModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+              <h2>Adjust Stock — {stockProduct?.name}</h2>
+              <button className="modal-close-btn" onClick={() => setIsStockModalOpen(false)}>✕</button>
             </div>
             <form onSubmit={handleStockSubmit}>
               <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label">Movement Type</label>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <label>
-                      <input type="radio" name="type" checked={stockForm.type === 'IN'} onChange={() => setStockForm({...stockForm, type: 'IN'})} /> IN (Add Stock)
+                  <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input type="radio" name="type" checked={stockForm.type === 'IN'} onChange={() => setStockForm({...stockForm, type: 'IN'})} />
+                      <span>IN — Add Stock</span>
                     </label>
-                    <label>
-                      <input type="radio" name="type" checked={stockForm.type === 'OUT'} onChange={() => setStockForm({...stockForm, type: 'OUT'})} /> OUT (Remove Stock)
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input type="radio" name="type" checked={stockForm.type === 'OUT'} onChange={() => setStockForm({...stockForm, type: 'OUT'})} />
+                      <span>OUT — Remove Stock</span>
                     </label>
                   </div>
                 </div>

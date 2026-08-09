@@ -5,6 +5,8 @@ import Pagination from '../../components/Pagination';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import TableSkeleton from '../../components/TableSkeleton';
+import EmptyState from '../../components/EmptyState';
 
 const CustomerList: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -13,10 +15,10 @@ const CustomerList: React.FC = () => {
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  
+
   const [formData, setFormData] = useState({
     name: '', mobile: '', email: '', businessName: '', gstNumber: '',
     type: 'RETAIL', address: '', status: 'LEAD', followUpDate: ''
@@ -39,9 +41,7 @@ const CustomerList: React.FC = () => {
   };
 
   useEffect(() => {
-    const delaySearch = setTimeout(() => {
-      fetchCustomers();
-    }, 300);
+    const delaySearch = setTimeout(() => { fetchCustomers(); }, 300);
     return () => clearTimeout(delaySearch);
   }, [search, status, page]);
 
@@ -61,10 +61,7 @@ const CustomerList: React.FC = () => {
       });
     } else {
       setEditingCustomer(null);
-      setFormData({
-        name: '', mobile: '', email: '', businessName: '', gstNumber: '',
-        type: 'RETAIL', address: '', status: 'LEAD', followUpDate: ''
-      });
+      setFormData({ name: '', mobile: '', email: '', businessName: '', gstNumber: '', type: 'RETAIL', address: '', status: 'LEAD', followUpDate: '' });
     }
     setIsModalOpen(true);
   };
@@ -78,7 +75,6 @@ const CustomerList: React.FC = () => {
         ...formData,
         followUpDate: formData.followUpDate ? new Date(formData.followUpDate).toISOString() : undefined
       };
-      
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, payload);
         showToast('Customer updated successfully', 'success');
@@ -93,30 +89,33 @@ const CustomerList: React.FC = () => {
     }
   };
 
+  const statusBadge = (s: string) =>
+    s === 'ACTIVE' ? 'badge-success' : s === 'LEAD' ? 'badge-warning' : 'badge-gray';
+
   return (
     <div>
       <div className="page-header">
         <h2>Customers</h2>
         {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
-          <button className="btn btn-primary" onClick={() => openModal()}>Add Customer</button>
+          <button className="btn btn-primary" onClick={() => openModal()}>＋ Add Customer</button>
         )}
       </div>
 
       <div className="card">
         <div className="filters-bar">
-          <input 
-            type="text" 
-            placeholder="Search name, mobile, business..." 
-            className="form-input" 
-            style={{ width: '300px' }}
+          <input
+            type="text"
+            placeholder="Search name, mobile, business..."
+            className="form-input"
+            style={{ width: 300 }}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
-          <select 
-            className="form-select" 
-            style={{ width: '150px' }}
+          <select
+            className="form-select"
+            style={{ width: 160 }}
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
           >
             <option value="">All Statuses</option>
             <option value="LEAD">LEAD</option>
@@ -125,53 +124,57 @@ const CustomerList: React.FC = () => {
           </select>
         </div>
 
-        {loading ? (
-          <div className="loading-center"><div className="loading-spinner"></div></div>
-        ) : (
-          <>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Business</th>
-                    <th>Mobile</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Business</th>
+                <th>Mobile</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableSkeleton columns={6} rows={6} />
+              ) : customers.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon="👥"
+                      title="No customers found"
+                      description={search || status ? 'Try adjusting your search or filter.' : 'Add your first customer to get started.'}
+                      action={(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
+                        <button className="btn btn-primary btn-sm" onClick={() => openModal()}>Add Customer</button>
+                      ) : undefined}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                customers.map((c) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 500 }}>{c.name}</td>
+                    <td style={{ color: 'var(--muted-foreground)' }}>{c.businessName || '—'}</td>
+                    <td>{c.mobile}</td>
+                    <td><span className="badge badge-gray">{c.type}</span></td>
+                    <td><span className={`badge ${statusBadge(c.status)}`}>{c.status}</span></td>
+                    <td>
+                      <div className="btn-group">
+                        <Link to={`/customers/${c.id}`} className="btn btn-sm btn-secondary">View</Link>
+                        {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+                          <button className="btn btn-sm btn-secondary" onClick={() => openModal(c)}>Edit</button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {customers.map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.name}</td>
-                      <td>{c.businessName || '-'}</td>
-                      <td>{c.mobile}</td>
-                      <td>{c.type}</td>
-                      <td>
-                        <span className={`badge badge-${c.status === 'ACTIVE' ? 'success' : c.status === 'LEAD' ? 'warning' : 'gray'}`}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="btn-group">
-                          <Link to={`/customers/${c.id}`} className="btn btn-sm btn-secondary">View</Link>
-                          {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
-                            <button className="btn btn-sm btn-secondary" onClick={() => openModal(c)}>Edit</button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {customers.length === 0 && (
-                    <tr><td colSpan={6} className="empty-state">No customers found</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
       </div>
 
       {isModalOpen && (
@@ -179,7 +182,7 @@ const CustomerList: React.FC = () => {
           <div className="modal modal-lg">
             <div className="modal-header">
               <h2>{editingCustomer ? 'Edit Customer' : 'Add Customer'}</h2>
-              <button className="btn" onClick={closeModal} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+              <button className="modal-close-btn" onClick={closeModal}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
