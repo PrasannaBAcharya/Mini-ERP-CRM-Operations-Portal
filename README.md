@@ -1,3 +1,7 @@
+## Demo Video
+Watch here: https://www.loom.com/share/5204f23179ff4167bc2bcee4d0372601
+
+
 # Mini ERP + CRM Application
 
 A full-stack, role-based Enterprise Resource Planning (ERP) and Customer Relationship Management (CRM) system built for small-to-medium businesses. It covers customer management, product inventory, delivery challans, and multi-role access control.
