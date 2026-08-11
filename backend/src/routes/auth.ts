@@ -41,7 +41,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       secret,
-      { expiresIn }
+      { expiresIn: expiresIn as any }
     );
 
     res.json({
