@@ -3,6 +3,11 @@
 Click the link below to access the deployed application:
 (https://mini-erp-crm-operations-portal-xt71.vercel.app)
 👉Mini ERP & CRM Operations Portal]
+Credentials:
+admin@erp.com; password123
+sales@erp.com; password123
+warehouse@erp.com; password123
+accounts@erp.com; password123
 
 
 ## Demo Video
