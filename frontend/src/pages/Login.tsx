@@ -18,7 +18,16 @@ const Login: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        setError('The server is waking up — this may take 30 seconds on first load. Please try again.');
+      } else if (!err.response) {
+        // Network error: no response received (CORS block, server down, no internet)
+        setError('Cannot reach the server. Check your internet connection or try again shortly.');
+      } else if (err.response?.status === 401) {
+        setError(err.response?.data?.message || 'Incorrect email or password.');
+      } else {
+        setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
