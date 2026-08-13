@@ -10,17 +10,28 @@ import userRoutes from './routes/users';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Allowed origins: set CORS_ORIGIN on Render to your Vercel deployment URL.
-// Multiple origins can be comma-separated: https://app.vercel.app,http://localhost:5173
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-  .split(',')
-  .map((o) => o.trim());
+// Always-allowed origin patterns (no env-var change needed for new Vercel deployments):
+//   - any *.vercel.app subdomain
+//   - localhost on ports 3000 and 5173
+// To add more, comma-separate them in the CORS_ORIGIN env var on Render.
+const VERCEL_PATTERN = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/;
+const ALWAYS_ALLOWED = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+const extraOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+const allowedOrigins = [...ALWAYS_ALLOWED, ...extraOrigins];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
+      // Allow requests with no origin (curl, Postman, Render health-checks)
       if (!origin) return callback(null, true);
+      // Allow any *.vercel.app deployment URL (preview + production)
+      if (VERCEL_PATTERN.test(origin)) return callback(null, true);
+      // Allow exact-match origins (localhost + any extras in env)
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS: origin ${origin} not allowed`));
     },
