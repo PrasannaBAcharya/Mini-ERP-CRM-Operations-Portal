@@ -1,7 +1,9 @@
 ## 🚀 Live Demo
 
 Click the link below to access the deployed application:
-👉Mini ERP & CRM Operations Portal](https://mini-erp-crm-operations-portal-xt71.vercel.app)
+(https://mini-erp-crm-operations-portal-xt71.vercel.app)
+👉Mini ERP & CRM Operations Portal]
+
 
 ## Demo Video
 Watch here: https://www.loom.com/share/5204f23179ff4167bc2bcee4d0372601
